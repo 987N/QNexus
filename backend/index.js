@@ -42,6 +42,12 @@ const start = async () => {
     // 连接 WebSocket 到同步服务
     syncService.setWebSocketService(websocketService);
     
+    // 当有新客户端连接时，立即触发一次同步
+    websocketService.on('connection', () => {
+      console.log('Client connected, triggering immediate sync');
+      syncService.syncAll();
+    });
+    
     console.log(`Server running at http://localhost:${port}`);
     console.log(`WebSocket server running on ws://localhost:${port}`);
   } catch (err) {

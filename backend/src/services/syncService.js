@@ -27,6 +27,11 @@ class SyncService {
   }
 
   async syncAll() {
+    // 如果没有客户端连接，跳过同步以节省资源
+    if (this.websocketService && this.websocketService.getClientCount() === 0) {
+      return;
+    }
+
     const containers = db.prepare('SELECT * FROM qb_containers').all();
     
     for (const container of containers) {

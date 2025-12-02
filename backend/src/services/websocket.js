@@ -1,9 +1,15 @@
 const WebSocket = require('ws');
+const EventEmitter = require('events');
 
-class WebSocketService {
+class WebSocketService extends EventEmitter {
   constructor() {
+    super();
     this.wss = null;
     this.clients = new Set();
+  }
+
+  getClientCount() {
+    return this.clients.size;
   }
 
   start(server) {
@@ -12,6 +18,7 @@ class WebSocketService {
     this.wss.on('connection', (ws, request) => {
       console.log('[WebSocket] 客户端已连接');
       this.clients.add(ws);
+      this.emit('connection', ws);
 
       // 发送欢迎消息
       ws.send(JSON.stringify({
