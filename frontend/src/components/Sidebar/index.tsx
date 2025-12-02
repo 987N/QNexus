@@ -117,7 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const fetchFilters = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:3000/api/torrents/filters?containerId=${currentContainerId}`
+        `/api/torrents/filters?containerId=${currentContainerId}`
       );
       setFilterOptions(res.data);
     } catch (err) {
@@ -128,7 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const fetchCategories = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:3000/api/torrents/categories?containerId=${currentContainerId}`
+        `/api/torrents/categories?containerId=${currentContainerId}`
       );
       setAllCategories(res.data || {});
     } catch (err) {

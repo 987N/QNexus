@@ -7,7 +7,7 @@ class WebSocketService {
   }
 
   start(server) {
-    this.wss = new WebSocket.Server({ server });
+    this.wss = new WebSocket.Server({ server, path: '/ws' });
 
     this.wss.on('connection', (ws, request) => {
       console.log('[WebSocket] 客户端已连接');

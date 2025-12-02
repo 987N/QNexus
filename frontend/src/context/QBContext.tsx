@@ -143,7 +143,7 @@ export const QBProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const fetchContainers = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/qb-containers');
+      const res = await axios.get('/api/qb-containers');
       setQbContainers(res.data);
       
       // If no current container selected, or selected one is gone, select the first one

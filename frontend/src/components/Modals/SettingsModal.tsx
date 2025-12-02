@@ -110,9 +110,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     try {
       if (editingId) {
-        await axios.put(`http://localhost:3000/api/qb-containers/${editingId}`, clientForm);
+        await axios.put(`/api/qb-containers/${editingId}`, clientForm);
       } else {
-        await axios.post('http://localhost:3000/api/qb-containers', clientForm);
+        await axios.post('/api/qb-containers', clientForm);
       }
       setEditingId(null);
       setClientForm({ name: '', host: '', port: '', username: '', password: '' });
@@ -137,7 +137,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const handleDeleteClient = async (id: number) => {
     if (!window.confirm(t('settings.clients.delete_confirm'))) return;
     try {
-      await axios.delete(`http://localhost:3000/api/qb-containers/${id}`);
+      await axios.delete(`/api/qb-containers/${id}`);
       fetchContainers();
     } catch (err) {
       console.error(err);

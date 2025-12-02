@@ -79,7 +79,9 @@ const Dashboard: React.FC<DashboardProps> = ({ filters: propFilters, sidebarColl
 
 
 // ... inside component ...
-  const { isConnected, lastMessage, subscribe } = useWebSocket('ws://localhost:3000');
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
+  const { isConnected, lastMessage, subscribe } = useWebSocket(wsUrl);
 
   // Subscribe to container updates
   useEffect(() => {
