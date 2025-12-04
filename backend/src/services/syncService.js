@@ -6,6 +6,23 @@ class SyncService {
     this.interval = null;
     this.syncIntervalMs = 2000; // Sync every 2 seconds (提升实时性)
     this.websocketService = null;
+
+    // Prepare statements once
+    this.stmtGetContainers = db.prepare('SELECT * FROM qb_containers');
+    
+    this.stmtInsertTorrent = db.prepare(`
+      INSERT OR REPLACE INTO torrents (
+        hash, container_id, name, size, progress, dlspeed, upspeed, 
+        downloaded, uploaded,
+        state, eta, category, tags, tracker, save_path, added_on, completion_on, last_activity
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    this.stmtGetContainerHashes = db.prepare('SELECT hash FROM torrents WHERE container_id = ?');
+    this.stmtDeleteTorrent = db.prepare('DELETE FROM torrents WHERE container_id = ? AND hash = ?');
+    this.stmtDeleteAllContainerTorrents = db.prepare('DELETE FROM torrents WHERE container_id = ?');
+    
+    this.stmtUpdateSyncStatus = db.prepare('INSERT OR REPLACE INTO sync_status (container_id, last_sync, status, error) VALUES (?, ?, ?, ?)');
   }
 
   setWebSocketService(wss) {
@@ -32,7 +49,7 @@ class SyncService {
       return;
     }
 
-    const containers = db.prepare('SELECT * FROM qb_containers').all();
+    const containers = this.stmtGetContainers.all();
     
     for (const container of containers) {
       this.syncContainer(container);
@@ -44,26 +61,14 @@ class SyncService {
     
     try {
       const torrents = await client.getTorrents();
+      const currentHashes = new Set(torrents.map(t => t.hash));
       
-      const insert = db.prepare(`
-        INSERT OR REPLACE INTO torrents (
-          hash, container_id, name, size, progress, dlspeed, upspeed, 
-          downloaded, uploaded,
-          state, eta, category, tags, tracker, save_path, added_on, completion_on, last_activity
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      const deleteOld = db.prepare(`
-        DELETE FROM torrents 
-        WHERE container_id = ? AND hash NOT IN (${torrents.map(() => '?').join(',')})
-      `);
-
       let hasChanges = false;
 
-      db.transaction(() => {
-        // Update/Insert current torrents
+      const syncTransaction = db.transaction(() => {
+        // 1. Insert/Update current torrents
         for (const t of torrents) {
-          const result = insert.run(
+          const result = this.stmtInsertTorrent.run(
             t.hash, container.id, t.name, t.size, t.progress, t.dlspeed, t.upspeed,
             t.downloaded || 0, t.uploaded || 0,
             t.state, t.eta, t.category, t.tags, t.tracker, t.save_path, t.added_on, t.completion_on, t.last_activity
@@ -73,24 +78,31 @@ class SyncService {
           }
         }
 
-        // Remove deleted torrents
-        if (torrents.length > 0) {
-            const result = deleteOld.run(container.id, ...torrents.map(t => t.hash));
-            if (result.changes > 0) {
-              hasChanges = true;
+        // 2. Delete missing torrents
+        // Get all existing hashes for this container from DB
+        const existingRows = this.stmtGetContainerHashes.all(container.id);
+        
+        if (torrents.length === 0) {
+            // Optimization: if no torrents returned, delete all
+            if (existingRows.length > 0) {
+                this.stmtDeleteAllContainerTorrents.run(container.id);
+                hasChanges = true;
             }
         } else {
-            // If no torrents returned, clear all for this container
-            const result = db.prepare('DELETE FROM torrents WHERE container_id = ?').run(container.id);
-            if (result.changes > 0) {
-              hasChanges = true;
+            // Delete only those that are not in the current list
+            for (const row of existingRows) {
+                if (!currentHashes.has(row.hash)) {
+                    this.stmtDeleteTorrent.run(container.id, row.hash);
+                    hasChanges = true;
+                }
             }
         }
 
-        // Update sync status
-        db.prepare('INSERT OR REPLACE INTO sync_status (container_id, last_sync, status, error) VALUES (?, ?, ?, ?)')
-          .run(container.id, Date.now(), 'success', null);
-      })();
+        // 3. Update sync status
+        this.stmtUpdateSyncStatus.run(container.id, Date.now(), 'success', null);
+      });
+
+      syncTransaction();
 
       // 如果数据有变化，推送 WebSocket 通知
       if (hasChanges && this.websocketService) {
@@ -108,8 +120,7 @@ class SyncService {
       }
       console.error(`[SyncService] Failed to sync container ${container.name}:`, error.message);
       try {
-        db.prepare('INSERT OR REPLACE INTO sync_status (container_id, last_sync, status, error) VALUES (?, ?, ?, ?)')
-          .run(container.id, Date.now(), 'error', error.message);
+        this.stmtUpdateSyncStatus.run(container.id, Date.now(), 'error', error.message);
       } catch (statusError) {
         // Ignore if we can't update status (e.g. container deleted)
       }
