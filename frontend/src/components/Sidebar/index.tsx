@@ -14,12 +14,7 @@ import {
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
-import {
-  AreaChart,
-  Area,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQB } from "../../context/QBContext";
 import AddCategoryModal from "../Modals/AddCategoryModal";
@@ -47,12 +42,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   onFilterChange,
   speedData,
   stats,
-  collapsed
+  collapsed,
 }) => {
   const { t } = useTranslation();
   const { uiSettings } = useQB();
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<{ name: string; savePath: string } | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{
+    name: string;
+    savePath: string;
+  } | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
   const [expandedSections, setExpandedSectionsState] = useState<
@@ -153,41 +151,42 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Merge all categories with filter counts
-  const mergedCategories = Object.keys(allCategories).map(catName => {
-    const filterItem = filterOptions.categories.find(c => c.label === catName);
+  const mergedCategories = Object.keys(allCategories).map((catName) => {
+    const filterItem = filterOptions.categories.find(
+      (c) => c.label === catName
+    );
     return {
       label: catName,
       count: filterItem ? filterItem.count : 0,
-      savePath: allCategories[catName].savePath
+      savePath: allCategories[catName].savePath,
     };
   });
 
   // Also include categories that might be in filters but not in allCategories (uncategorized is handled separately usually, but just in case)
-  filterOptions.categories.forEach(f => {
+  filterOptions.categories.forEach((f) => {
     if (!allCategories[f.label]) {
-      mergedCategories.push({ label: f.label, count: f.count, savePath: '' });
+      mergedCategories.push({ label: f.label, count: f.count, savePath: "" });
     }
   });
-  
-  // Deduplicate by label
-  const uniqueCategories = Array.from(new Map(mergedCategories.map(item => [item.label, item])).values());
 
+  // Deduplicate by label
+  const uniqueCategories = Array.from(
+    new Map(mergedCategories.map((item) => [item.label, item])).values()
+  );
 
   return (
     <motion.aside
       initial={false}
-      animate={{ 
+      animate={{
         width: collapsed ? 0 : 256,
-        opacity: collapsed ? 0 : 1
       }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={clsx(
-        "bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-r border-gray-200/50 dark:border-gray-800/50 flex flex-col h-screen relative overflow-hidden transition-all duration-300 ease-in-out z-20",
-        collapsed && "border-r-0"
+        "bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-r border-gray-200/50 dark:border-gray-800/50 flex flex-col h-screen relative overflow-hidden z-20"
       )}
     >
       {/* Content - Only visible when expanded */}
-      <div className="flex-1 flex flex-col min-h-0 w-64">
+      <div className="flex-1 flex flex-col min-h-0 w-64 min-w-[16rem]">
         {/* 1. QB Switcher */}
         <div className="px-2.5 py-2 border-b border-gray-200 dark:border-gray-800">
           <div className="relative group">
@@ -375,7 +374,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                   count={item.count}
                   active={filters.category === item.label}
                   onClick={() => onFilterChange("category", item.label)}
-                  onEdit={() => setEditingCategory({ name: item.label, savePath: item.savePath })}
+                  onEdit={() =>
+                    setEditingCategory({
+                      name: item.label,
+                      savePath: item.savePath,
+                    })
+                  }
                   onDelete={() => setDeletingCategory(item.label)}
                 />
               ))}
@@ -457,8 +461,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             </FilterSection>
           )}
         </div>
-      </div> 
-      
+      </div>
+
       <AddCategoryModal
         isOpen={isAddCategoryModalOpen}
         onClose={() => setIsAddCategoryModalOpen(false)}
@@ -505,10 +509,7 @@ const FilterSection: React.FC<{
 }> = ({ title, icon: Icon, expanded, onToggle, onAdd, children }) => (
   <div className="mb-0.5">
     <div className="w-full flex items-center justify-between px-2 py-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors group">
-      <button
-        onClick={onToggle}
-        className="flex items-center space-x-2 flex-1"
-      >
+      <button onClick={onToggle} className="flex items-center space-x-2 flex-1">
         <Icon className="w-4 h-4" />
         <span className="text-sm font-medium">{title}</span>
       </button>
@@ -573,7 +574,9 @@ const FilterItem: React.FC<{
       {label}
     </button>
     <div className="flex items-center space-x-1">
-      {count !== undefined && <span className="text-gray-500 dark:text-gray-600">{count}</span>}
+      {count !== undefined && (
+        <span className="text-gray-500 dark:text-gray-600">{count}</span>
+      )}
       {(onEdit || onDelete) && (
         <div className="hidden group-hover/item:flex items-center space-x-1 pl-1">
           {onEdit && (
